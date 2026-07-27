@@ -1,0 +1,30 @@
+# Keil 编译产物
+Objects/
+Listings/
+*.o
+*.d
+*.axf
+*.hex
+*.bin
+*.map
+*.lst
+*.crf
+*.dep
+*.scvd
+*.uvguix.*
+JLinkLog.txt
+
+# Python 虚拟环境
+.venv/
+__pycache__/
+*.pyc
+
+# 本地工具缓存
+.pi/
+
+# 文档大文件（芯片手册等不进仓库）
+docs/*.pdf
+
+# Windows
+Thumbs.db
+desktop.ini
