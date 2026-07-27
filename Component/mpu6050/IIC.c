@@ -1,11 +1,10 @@
-// MSPM0 软件模拟 I2C 驱动 — 复用硬件 I2C0 引脚 (PA0-SDA, PA1-SCL)
-// 调用前需先由 SYSCFG_DL_init() 配置 PA0/PA1 为 GPIO 输出（或运行时重配 IOMUX）
-// 基于 MSPM0 SDK 2.04 DL_GPIO API
+// MSPM0 软件模拟 I2C 驱动 (开漏SDA + 推挽SCL)
+// SDA 只拉低不放高，高电平靠外部上拉电阻
+// PA0-SDA, PA1-SCL, 80MHz 主频
 
 #include "IIC.h"
 #include "ti_msp_dl_config.h"
 
-/* 复用 SysConfig 中 I2C_0 的引脚定义 */
 #define I2C_SDA_PORT    GPIO_I2C_0_SDA_PORT
 #define I2C_SDA_PIN     GPIO_I2C_0_SDA_PIN
 #define I2C_SCL_PORT    GPIO_I2C_0_SCL_PORT
@@ -13,121 +12,131 @@
 #define I2C_SDA_IOMUX   GPIO_I2C_0_IOMUX_SDA
 #define I2C_SCL_IOMUX   GPIO_I2C_0_IOMUX_SCL
 
-/* 约 5us 延时（80MHz 主频） */
+/* 延时 ~5us @80MHz */
 static inline void i2c_delay(void)
 {
     volatile uint32_t i;
-    for (i = 0; i < 40; i++);
+    for (i = 0; i < 400; i++);
 }
 
-static inline void sda_output(void)
+/* ── SDA 控制：只拉低，不放高 ── */
+
+/* SDA 输出低电平 (开漏拉低) */
+static inline void sda_low(void)
 {
+    DL_GPIO_clearPins(I2C_SDA_PORT, I2C_SDA_PIN);
     DL_GPIO_enableOutput(I2C_SDA_PORT, I2C_SDA_PIN);
 }
 
-static inline void sda_input(void)
+/* SDA 释放为高阻 (外部上拉 → 高电平) */
+static inline void sda_release(void)
 {
     DL_GPIO_disableOutput(I2C_SDA_PORT, I2C_SDA_PIN);
 }
 
+/* 读 SDA 电平 */
+static inline uint32_t sda_read(void)
+{
+    return DL_GPIO_readPins(I2C_SDA_PORT, I2C_SDA_PIN);
+}
+
+/* ── SCL 控制：推挽 ── */
+static inline void scl_high(void) { DL_GPIO_setPins(I2C_SCL_PORT, I2C_SCL_PIN); }
+static inline void scl_low(void)  { DL_GPIO_clearPins(I2C_SCL_PORT, I2C_SCL_PIN); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   公开接口
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 void IIC_Init(void)
 {
-    // 将 PA0/PA1 从 I2C 外设功能切为 GPIO 模式
+    /* SDA: GPIO 输出模式，初始写0，释放为高阻 */
     DL_GPIO_initDigitalOutput(I2C_SDA_IOMUX);
-    DL_GPIO_initDigitalOutput(I2C_SCL_IOMUX);
+    DL_GPIO_clearPins(I2C_SDA_PORT, I2C_SDA_PIN);
+    sda_release();  /* 释放 → 上拉高 */
 
-    // 初始均为高电平 (推挽输出)
+    /* SCL: GPIO 推挽输出，初始高 */
+    DL_GPIO_initDigitalOutput(I2C_SCL_IOMUX);
     DL_GPIO_setPins(I2C_SCL_PORT, I2C_SCL_PIN);
-    DL_GPIO_setPins(I2C_SDA_PORT, I2C_SDA_PIN);
     DL_GPIO_enableOutput(I2C_SCL_PORT, I2C_SCL_PIN);
-    DL_GPIO_enableOutput(I2C_SDA_PORT, I2C_SDA_PIN);
 }
 
-// SCL 高电平时 SDA 下降沿 → 起始信号
 void IIC_Start(void)
 {
-    sda_output();
-    DL_GPIO_setPins(I2C_SDA_PORT, I2C_SDA_PIN);
-    DL_GPIO_setPins(I2C_SCL_PORT, I2C_SCL_PIN);
+    sda_release();       /* SDA 高 */
+    scl_high();          /* SCL 高 */
     i2c_delay();
-    DL_GPIO_clearPins(I2C_SDA_PORT, I2C_SDA_PIN);
+    sda_low();           /* SDA ↓ (起始条件) */
     i2c_delay();
-    DL_GPIO_clearPins(I2C_SCL_PORT, I2C_SCL_PIN);
+    scl_low();           /* SCL ↓ */
     i2c_delay();
 }
 
-// SCL 高电平时 SDA 上升沿 → 停止信号
 void IIC_Stop(void)
 {
-    sda_output();
-    DL_GPIO_clearPins(I2C_SDA_PORT, I2C_SDA_PIN);
+    sda_low();           /* SDA 低 */
+    scl_high();          /* SCL ↑ */
     i2c_delay();
-    DL_GPIO_setPins(I2C_SCL_PORT, I2C_SCL_PIN);
-    i2c_delay();
-    DL_GPIO_setPins(I2C_SDA_PORT, I2C_SDA_PIN);
+    sda_release();       /* SDA ↑ (停止条件) */
     i2c_delay();
 }
 
-// 等待从机应答：返回 0 表示应答，1 表示无应答
 uint8_t IIC_Wait_Ack(void)
 {
-    uint8_t ack = 0;
-    sda_input();
-    DL_GPIO_setPins(I2C_SCL_PORT, I2C_SCL_PIN);
+    uint8_t ack;
+    sda_release();       /* 释放SDA, 等待从机拉低 */
+    scl_high();          /* SCL ↑, 从机此时应答 */
     i2c_delay();
-    if (DL_GPIO_readPins(I2C_SDA_PORT, I2C_SDA_PIN))
-        ack = 1;
-    DL_GPIO_clearPins(I2C_SCL_PORT, I2C_SCL_PIN);
+    ack = sda_read() ? 1 : 0;
+    scl_low();           /* SCL ↓ */
     i2c_delay();
-    return ack;
+    return ack;          /* 0=ACK, 1=NACK */
 }
 
-// 发送一个字节 (MSB first)
 void IIC_Send_Byte(uint8_t txd)
 {
-    sda_output();
     for (uint8_t i = 0; i < 8; i++) {
-        DL_GPIO_clearPins(I2C_SCL_PORT, I2C_SCL_PIN);
+        if (txd & 0x80) {
+            sda_release();
+        } else {
+            sda_low();
+        }
         i2c_delay();
-        if (txd & 0x80)
-            DL_GPIO_setPins(I2C_SDA_PORT, I2C_SDA_PIN);
-        else
-            DL_GPIO_clearPins(I2C_SDA_PORT, I2C_SDA_PIN);
+        scl_high();      /* SCL ↑, 从机采样 */
         i2c_delay();
-        DL_GPIO_setPins(I2C_SCL_PORT, I2C_SCL_PIN);
+        scl_low();       /* SCL ↓ */
         i2c_delay();
         txd <<= 1;
     }
-    DL_GPIO_clearPins(I2C_SCL_PORT, I2C_SCL_PIN);
+    sda_release();       /* 释放SDA, 等待ACK */
     i2c_delay();
 }
 
-// 读取一个字节 (ack=1 发送应答, ack=0 发送非应答)
 uint8_t IIC_Read_Byte(uint8_t ack)
 {
     uint8_t rx = 0;
-    sda_input();
+    sda_release();       /* 释放SDA */
     for (uint8_t i = 0; i < 8; i++) {
-        DL_GPIO_clearPins(I2C_SCL_PORT, I2C_SCL_PIN);
-        i2c_delay();
-        DL_GPIO_setPins(I2C_SCL_PORT, I2C_SCL_PIN);
+        scl_high();      /* SCL ↑, 从机输出数据 */
         i2c_delay();
         rx <<= 1;
-        if (DL_GPIO_readPins(I2C_SDA_PORT, I2C_SDA_PIN))
+        if (sda_read()) {
             rx |= 0x01;
+        }
+        scl_low();       /* SCL ↓ */
+        i2c_delay();
     }
-    // 发送应答位
-    sda_output();
-    DL_GPIO_clearPins(I2C_SCL_PORT, I2C_SCL_PIN);
+    /* 发送应答位 */
+    if (ack) {
+        sda_release();   /* NACK: 释放 */
+    } else {
+        sda_low();       /* ACK: 拉低 */
+    }
     i2c_delay();
-    if (ack)
-        DL_GPIO_setPins(I2C_SDA_PORT, I2C_SDA_PIN);   // 非应答
-    else
-        DL_GPIO_clearPins(I2C_SDA_PORT, I2C_SDA_PIN);  // 应答
+    scl_high();          /* SCL ↑ */
     i2c_delay();
-    DL_GPIO_setPins(I2C_SCL_PORT, I2C_SCL_PIN);
+    scl_low();           /* SCL ↓ */
     i2c_delay();
-    DL_GPIO_clearPins(I2C_SCL_PORT, I2C_SCL_PIN);
-    i2c_delay();
+    sda_release();       /* 释放SDA */
     return rx;
 }
