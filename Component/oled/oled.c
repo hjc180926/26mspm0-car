@@ -52,7 +52,7 @@ uint8_t OLED_GRAM[OLED_WIDTH][OLED_HEIGHT / 8U];  /* OLED 显存：128×8 字节
 #define OLED_SW_SCL_PIN        GPIO_OLED_SW_I2C_PIN_OLED_SCL_PIN
 #define OLED_SW_SDA_IOMUX      GPIO_OLED_SW_I2C_PIN_OLED_SDA_IOMUX
 #define OLED_SW_SCL_IOMUX      GPIO_OLED_SW_I2C_PIN_OLED_SCL_IOMUX
-#define OLED_SW_I2C_DELAY      (120U)
+#define OLED_SW_I2C_DELAY      (40U)
 
 static void oled_i2c_delay(void)
 {
