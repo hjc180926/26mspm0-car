@@ -164,12 +164,6 @@ extern "C" {
 
 
 
-/* Port definition for Pin Group LED */
-#define LED_PORT                                                         (GPIOB)
-
-/* Defines for PIN_22: GPIOB.22 with pinCMx 50 on package pin 21 */
-#define LED_PIN_22_PIN                                          (DL_GPIO_PIN_22)
-#define LED_PIN_22_IOMUX                                         (IOMUX_PINCM50)
 /* Port definition for Pin Group GPIO_MPU6050_INT */
 #define GPIO_MPU6050_INT_PORT                                            (GPIOB)
 
@@ -180,12 +174,6 @@ extern "C" {
 #define GPIO_MPU6050_INT_PIN_MPU6050_INT_IIDX                (DL_GPIO_IIDX_DIO4)
 #define GPIO_MPU6050_INT_PIN_MPU6050_INT_PIN                     (DL_GPIO_PIN_4)
 #define GPIO_MPU6050_INT_PIN_MPU6050_INT_IOMUX                   (IOMUX_PINCM17)
-/* Port definition for Pin Group GPIO_KEY_USER */
-#define GPIO_KEY_USER_PORT                                               (GPIOB)
-
-/* Defines for PIN_KEY_USER: GPIOB.21 with pinCMx 49 on package pin 20 */
-#define GPIO_KEY_USER_PIN_KEY_USER_PIN                          (DL_GPIO_PIN_21)
-#define GPIO_KEY_USER_PIN_KEY_USER_IOMUX                         (IOMUX_PINCM49)
 /* Port definition for Pin Group GPIO_BTN_U8 */
 #define GPIO_BTN_U8_PORT                                                 (GPIOA)
 
@@ -210,6 +198,36 @@ extern "C" {
 /* Defines for PIN_BTN_U12: GPIOB.8 with pinCMx 25 on package pin 60 */
 #define GPIO_BTN_U12_PIN_BTN_U12_PIN                             (DL_GPIO_PIN_8)
 #define GPIO_BTN_U12_PIN_BTN_U12_IOMUX                           (IOMUX_PINCM25)
+/* Port definition for Pin Group GPIO_TRK_CH0 */
+#define GPIO_TRK_CH0_PORT                                                (GPIOB)
+
+/* Defines for PIN_TRK_CH0: GPIOB.25 with pinCMx 56 on package pin 27 */
+#define GPIO_TRK_CH0_PIN_TRK_CH0_PIN                            (DL_GPIO_PIN_25)
+#define GPIO_TRK_CH0_PIN_TRK_CH0_IOMUX                           (IOMUX_PINCM56)
+/* Port definition for Pin Group GPIO_TRK_CH1 */
+#define GPIO_TRK_CH1_PORT                                                (GPIOB)
+
+/* Defines for PIN_TRK_CH1: GPIOB.18 with pinCMx 44 on package pin 15 */
+#define GPIO_TRK_CH1_PIN_TRK_CH1_PIN                            (DL_GPIO_PIN_18)
+#define GPIO_TRK_CH1_PIN_TRK_CH1_IOMUX                           (IOMUX_PINCM44)
+/* Port definition for Pin Group GPIO_TRK_CH2 */
+#define GPIO_TRK_CH2_PORT                                                (GPIOB)
+
+/* Defines for PIN_TRK_CH2: GPIOB.21 with pinCMx 49 on package pin 20 */
+#define GPIO_TRK_CH2_PIN_TRK_CH2_PIN                            (DL_GPIO_PIN_21)
+#define GPIO_TRK_CH2_PIN_TRK_CH2_IOMUX                           (IOMUX_PINCM49)
+/* Port definition for Pin Group GPIO_TRK_CH3 */
+#define GPIO_TRK_CH3_PORT                                                (GPIOB)
+
+/* Defines for PIN_TRK_CH3: GPIOB.22 with pinCMx 50 on package pin 21 */
+#define GPIO_TRK_CH3_PIN_TRK_CH3_PIN                            (DL_GPIO_PIN_22)
+#define GPIO_TRK_CH3_PIN_TRK_CH3_IOMUX                           (IOMUX_PINCM50)
+/* Port definition for Pin Group GPIO_TRK_CH4 */
+#define GPIO_TRK_CH4_PORT                                                (GPIOA)
+
+/* Defines for PIN_TRK_CH4: GPIOA.30 with pinCMx 5 on package pin 37 */
+#define GPIO_TRK_CH4_PIN_TRK_CH4_PIN                            (DL_GPIO_PIN_30)
+#define GPIO_TRK_CH4_PIN_TRK_CH4_IOMUX                            (IOMUX_PINCM5)
 /* Port definition for Pin Group GPIO_OLED_SW_I2C */
 #define GPIO_OLED_SW_I2C_PORT                                            (GPIOA)
 

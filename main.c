@@ -11,6 +11,12 @@
 #include "oled/oled.h"
 #include "mpu6050/mpu6050.h"
 #include "common/util.h"
+#include "tracking/tracking.h"
+
+/* ── 循迹电机参数 (可调) ── */
+#define TRK_BASE_SPEED   20   /* 基础速度 */
+#define TRK_STEER_GAIN    5   /* 每级偏差修正量 */
+#define TRK_MAX_SPEED    40   /* 限幅 */
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
@@ -53,6 +59,7 @@ static void prvSetupHardware(void)
 {
     SYSCFG_DL_init();   /* 含 4 按键 GPIO 初始化 */
     led_init(); led_on();
+    tracking_init();
     uart0_init();
     tb6612_init();
     encoder_init();
@@ -187,26 +194,53 @@ int main(void)
         if(g_mpu_ok) while((int32_t)(n-g_next_yaw)>=0){ g_next_yaw+=10; yaw_step(); }
 
         while((int32_t)(n-le)>=10){ le+=10;
-            encoder_data_t e; encoder_get_data(&e);
-            g_l_cms_x10=SPEED_CMS_X10(e.left_delta); g_r_cms_x10=SPEED_CMS_X10(e.right_delta);
-            g_l_dist+=e.left_delta; g_r_dist+=e.right_delta; }
+            // 原 PID/编码器速度计算已屏蔽
+            //encoder_data_t e; encoder_get_data(&e);
+            //g_l_cms_x10=SPEED_CMS_X10(e.left_delta); g_r_cms_x10=SPEED_CMS_X10(e.right_delta);
+            //g_l_dist+=e.left_delta; g_r_dist+=e.right_delta;
+
+            /* 循迹直驱电机 (小值测试) */
+            uint8_t trk_m = tracking_read_all();
+            int8_t  pos  = tracking_get_position();  /* -4 ~ +4 */
+
+            if (trk_m == 0) {
+            /* 全部脱线: 停车 */
+            tb6612_set_speed(0, 0);
+            } else {
+            /* 基础速度 20, 偏差修正 ±5/级 */
+                int16_t base = TRK_BASE_SPEED;
+                int16_t adj  = (int16_t)pos * TRK_STEER_GAIN;
+                int16_t left  = base + adj;
+                int16_t right = base - adj;
+
+                /* 限幅 */
+                if (left  > TRK_MAX_SPEED) left  = TRK_MAX_SPEED;
+                if (left  < -TRK_MAX_SPEED) left  = -TRK_MAX_SPEED;
+                if (right > TRK_MAX_SPEED) right = TRK_MAX_SPEED;
+                if (right < -TRK_MAX_SPEED) right = -TRK_MAX_SPEED;
+
+                tb6612_set_speed(left, right);
+            }
+        }
 
         if((int32_t)(n-lo)>=100){ lo+=100;
-            char bl[8],br[8],dl[8],dr[8],ps[7],rs[7];
-            fmt_cms(bl,g_l_cms_x10); fmt_cms(br,g_r_cms_x10);
-            fmt_dist(dl,g_l_dist); fmt_dist(dr,g_r_dist);
-            fmt_ang(ps,g_pitch); fmt_ang(rs,g_roll);
+            /* ── 原 OLED 显示 (速度/距离/MPU) 已注释 ── */
+            //char bl[8],br[8],dl[8],dr[8],ps[7],rs[7];
+            //fmt_cms(bl,g_l_cms_x10); fmt_cms(br,g_r_cms_x10);
+            //fmt_dist(dl,g_l_dist); fmt_dist(dr,g_r_dist);
+            //fmt_ang(ps,g_pitch); fmt_ang(rs,g_roll);
+            //uint32_t t = g_tmr_on ? (n - g_tmr_start) : 0;
 
-            uint32_t t = g_tmr_on ? (n - g_tmr_start) : 0;
+            /* 5路循迹传感器状态 */
+            uint8_t trk = tracking_read_all();
 
             OLED_Clear();
-            OLED_vsprint(0,0,16,"L:%s R:%s cm/s",bl,br);
-            OLED_vsprint(0,16,16,"DL:%s DR:%s cm",dl,dr);
-            OLED_vsprint(0,32,16,"T:%lu.%lus %s",
-                (unsigned long)(t/1000),(unsigned long)((t%1000)/100),
-                g_tmr_on?"ON":"OFF");
-            if(g_mpu_ok) OLED_vsprint(0,48,16,"P:%s R:%s",ps,rs);
-            else OLED_vsprint(0,48,16,"MPU: no signal");
+            OLED_vsprint(0,0,16,"Trk:%d%d%d%d%d",
+                (trk>>0)&1,(trk>>1)&1,(trk>>2)&1,(trk>>3)&1,(trk>>4)&1);
+            //OLED_vsprint(0,16,16,"DL:%s DR:%s cm",dl,dr);
+            //OLED_vsprint(0,32,16,"T:%lu.%lus %s",(unsigned long)(t/1000),(unsigned long)((t%1000)/100),g_tmr_on?"ON":"OFF");
+            //if(g_mpu_ok) OLED_vsprint(0,48,16,"P:%s R:%s",ps,rs);
+            //else OLED_vsprint(0,48,16,"MPU: no signal");
             OLED_Refresh(); }
 
         if((int32_t)(n-lp)>=5000){ lp+=5000;

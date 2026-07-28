@@ -562,7 +562,7 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>New Group</GroupName>
+          <GroupName>mpu6050</GroupName>
           <Files>
             <File>
               <FileName>IIC.c</FileName>
@@ -583,6 +583,21 @@
               <FileName>mpu6050.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\Component\mpu6050\mpu6050.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>xunji</GroupName>
+          <Files>
+            <File>
+              <FileName>tracking.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Component\tracking\tracking.c</FilePath>
+            </File>
+            <File>
+              <FileName>tracking.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Component\tracking\tracking.h</FilePath>
             </File>
           </Files>
         </Group>
