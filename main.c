@@ -1,6 +1,6 @@
 /**
  * @file    main.c
- * @brief   MPU6050 yaw — 用已验证的驱动函数，不加自定义 I2C
+ * @brief   MPU6050 yaw + 编码器 + 4按键 (PB9计时) — SysConfig 版
  */
 
 #include "ti_msp_dl_config.h"
@@ -25,6 +25,12 @@ static volatile uint32_t g_tick_1ms = 0;
 #define YAW_DT_S            0.01f
 #define BIAS_CALIB_SAMPLES  300
 
+/* ── 按键宏 (引脚由 SysConfig 生成) ── */
+#define BTN_U8  (DL_GPIO_readPins(GPIO_BTN_U8_PORT,  GPIO_BTN_U8_PIN_BTN_U8_PIN)==0)
+#define BTN_U10 (DL_GPIO_readPins(GPIO_BTN_U10_PORT, GPIO_BTN_U10_PIN_BTN_U10_PIN)==0)
+#define BTN_U11 (DL_GPIO_readPins(GPIO_BTN_U11_PORT, GPIO_BTN_U11_PIN_BTN_U11_PIN)==0)
+#define BTN_U12 (DL_GPIO_readPins(GPIO_BTN_U12_PORT, GPIO_BTN_U12_PIN_BTN_U12_PIN)==0)
+
 static int32_t  g_l_cms_x10 = 0, g_r_cms_x10 = 0;
 static int32_t  g_l_dist = 0, g_r_dist = 0;
 static bool     g_mpu_ok = false;
@@ -37,11 +43,15 @@ static bool     g_first         = true;
 static uint32_t g_next_yaw      = 0;
 static int      g_still_cnt     = 0;
 
+/* 计时 */
+static uint32_t g_tmr_start = 0;
+static bool     g_tmr_on    = false;
+
 /* ═══════════════════════════════════════════════════════════════════════ */
 
 static void prvSetupHardware(void)
 {
-    SYSCFG_DL_init();
+    SYSCFG_DL_init();   /* 含 4 按键 GPIO 初始化 */
     led_init(); led_on();
     uart0_init();
     tb6612_init();
@@ -135,7 +145,7 @@ int main(void)
     DL_TimerG_stopCounter(TIMER_0_INST);
     DL_TimerG_setLoadValue(TIMER_0_INST, 79999U);
 
-    uart0_sendStr("\r\n--- Yaw v5 ---\r\n");
+    uart0_sendStr("\r\n--- Yaw + BTN SysConfig ---\r\n");
 
     { uint8_t w[1]={0x75}; DL_I2C_fillControllerTXFIFO(I2C_0_INST,w,1);
       DL_I2C_startControllerTransfer(I2C_0_INST,0x68,DL_I2C_CONTROLLER_DIRECTION_TX,1);
@@ -156,8 +166,23 @@ int main(void)
     uart0_sendStr("Ready\r\n"); OLED_Init();
 
     uint32_t le=g_tick_1ms, lo=g_tick_1ms, lp=0;
+    uint32_t last_btn=0;
+    bool     pb9_was=false;
+
     while(1){
         uint32_t n=g_tick_1ms;
+
+        /* 按键扫描 10ms */
+        if((int32_t)(n-last_btn)>=10){ last_btn+=10;
+            bool pb9=BTN_U11;
+            if(pb9 && !pb9_was){
+                g_tmr_start = n;
+                g_tmr_on    = true;
+                g_l_dist = 0;
+                g_r_dist = 0;
+            }
+            pb9_was = pb9;
+        }
 
         if(g_mpu_ok) while((int32_t)(n-g_next_yaw)>=0){ g_next_yaw+=10; yaw_step(); }
 
@@ -171,12 +196,15 @@ int main(void)
             fmt_cms(bl,g_l_cms_x10); fmt_cms(br,g_r_cms_x10);
             fmt_dist(dl,g_l_dist); fmt_dist(dr,g_r_dist);
             fmt_ang(ps,g_pitch); fmt_ang(rs,g_roll);
+
+            uint32_t t = g_tmr_on ? (n - g_tmr_start) : 0;
+
             OLED_Clear();
             OLED_vsprint(0,0,16,"L:%s R:%s cm/s",bl,br);
             OLED_vsprint(0,16,16,"DL:%s DR:%s cm",dl,dr);
-            OLED_vsprint(0,32,16,"T:%lu.%lus",
-                (unsigned long)(n/1000),
-                (unsigned long)((n%1000)/100));
+            OLED_vsprint(0,32,16,"T:%lu.%lus %s",
+                (unsigned long)(t/1000),(unsigned long)((t%1000)/100),
+                g_tmr_on?"ON":"OFF");
             if(g_mpu_ok) OLED_vsprint(0,48,16,"P:%s R:%s",ps,rs);
             else OLED_vsprint(0,48,16,"MPU: no signal");
             OLED_Refresh(); }

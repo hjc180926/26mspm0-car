@@ -16,6 +16,10 @@ const GPIO3  = GPIO.addInstance();
 const GPIO4  = GPIO.addInstance();
 const GPIO5  = GPIO.addInstance();
 const GPIO6  = GPIO.addInstance();
+const GPIO7  = GPIO.addInstance();
+const GPIO8  = GPIO.addInstance();
+const GPIO9  = GPIO.addInstance();
+const GPIO10 = GPIO.addInstance();
 const I2C    = scripting.addModule("/ti/driverlib/I2C", {}, false);
 const I2C1   = I2C.addInstance();
 const PWM    = scripting.addModule("/ti/driverlib/PWM", {}, false);
@@ -112,6 +116,34 @@ GPIO6.associatedPins[1].interruptEn       = true;
 GPIO6.associatedPins[1].interruptPriority = "3";
 GPIO6.associatedPins[1].polarity          = "RISE_FALL";
 GPIO6.associatedPins[1].pin.$assign       = "PA14";
+
+GPIO7.$name                              = "GPIO_BTN_U8";
+GPIO7.port                               = "PORTA";
+GPIO7.associatedPins[0].$name            = "PIN_BTN_U8";
+GPIO7.associatedPins[0].direction        = "INPUT";
+GPIO7.associatedPins[0].internalResistor = "PULL_UP";
+GPIO7.associatedPins[0].pin.$assign      = "PA8";
+
+GPIO8.$name                              = "GPIO_BTN_U10";
+GPIO8.port                               = "PORTB";
+GPIO8.associatedPins[0].$name            = "PIN_BTN_U10";
+GPIO8.associatedPins[0].direction        = "INPUT";
+GPIO8.associatedPins[0].internalResistor = "PULL_UP";
+GPIO8.associatedPins[0].pin.$assign      = "PB20";
+
+GPIO9.$name                              = "GPIO_BTN_U11";
+GPIO9.port                               = "PORTB";
+GPIO9.associatedPins[0].$name            = "PIN_BTN_U11";
+GPIO9.associatedPins[0].direction        = "INPUT";
+GPIO9.associatedPins[0].internalResistor = "PULL_UP";
+GPIO9.associatedPins[0].pin.$assign      = "PB9";
+
+GPIO10.$name                              = "GPIO_BTN_U12";
+GPIO10.port                               = "PORTB";
+GPIO10.associatedPins[0].$name            = "PIN_BTN_U12";
+GPIO10.associatedPins[0].direction        = "INPUT";
+GPIO10.associatedPins[0].internalResistor = "PULL_UP";
+GPIO10.associatedPins[0].pin.$assign      = "PB8";
 
 I2C1.$name                     = "I2C_0";
 I2C1.basicEnableController     = true;

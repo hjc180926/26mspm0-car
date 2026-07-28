@@ -186,6 +186,30 @@ extern "C" {
 /* Defines for PIN_KEY_USER: GPIOB.21 with pinCMx 49 on package pin 20 */
 #define GPIO_KEY_USER_PIN_KEY_USER_PIN                          (DL_GPIO_PIN_21)
 #define GPIO_KEY_USER_PIN_KEY_USER_IOMUX                         (IOMUX_PINCM49)
+/* Port definition for Pin Group GPIO_BTN_U8 */
+#define GPIO_BTN_U8_PORT                                                 (GPIOA)
+
+/* Defines for PIN_BTN_U8: GPIOA.8 with pinCMx 19 on package pin 54 */
+#define GPIO_BTN_U8_PIN_BTN_U8_PIN                               (DL_GPIO_PIN_8)
+#define GPIO_BTN_U8_PIN_BTN_U8_IOMUX                             (IOMUX_PINCM19)
+/* Port definition for Pin Group GPIO_BTN_U10 */
+#define GPIO_BTN_U10_PORT                                                (GPIOB)
+
+/* Defines for PIN_BTN_U10: GPIOB.20 with pinCMx 48 on package pin 19 */
+#define GPIO_BTN_U10_PIN_BTN_U10_PIN                            (DL_GPIO_PIN_20)
+#define GPIO_BTN_U10_PIN_BTN_U10_IOMUX                           (IOMUX_PINCM48)
+/* Port definition for Pin Group GPIO_BTN_U11 */
+#define GPIO_BTN_U11_PORT                                                (GPIOB)
+
+/* Defines for PIN_BTN_U11: GPIOB.9 with pinCMx 26 on package pin 61 */
+#define GPIO_BTN_U11_PIN_BTN_U11_PIN                             (DL_GPIO_PIN_9)
+#define GPIO_BTN_U11_PIN_BTN_U11_IOMUX                           (IOMUX_PINCM26)
+/* Port definition for Pin Group GPIO_BTN_U12 */
+#define GPIO_BTN_U12_PORT                                                (GPIOB)
+
+/* Defines for PIN_BTN_U12: GPIOB.8 with pinCMx 25 on package pin 60 */
+#define GPIO_BTN_U12_PIN_BTN_U12_PIN                             (DL_GPIO_PIN_8)
+#define GPIO_BTN_U12_PIN_BTN_U12_IOMUX                           (IOMUX_PINCM25)
 /* Port definition for Pin Group GPIO_OLED_SW_I2C */
 #define GPIO_OLED_SW_I2C_PORT                                            (GPIOA)
 
