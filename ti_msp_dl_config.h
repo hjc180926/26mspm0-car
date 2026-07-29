@@ -252,6 +252,18 @@ extern "C" {
 /* Defines for PIN_TRK_CH5: GPIOB.0 with pinCMx 12 on package pin 47 */
 #define GPIO_TRK_CH5_PIN_TRK_CH5_PIN                             (DL_GPIO_PIN_0)
 #define GPIO_TRK_CH5_PIN_TRK_CH5_IOMUX                           (IOMUX_PINCM12)
+/* Port definition for Pin Group GPIO_TRK_CH6 */
+#define GPIO_TRK_CH6_PORT                                                (GPIOB)
+
+/* Defines for PIN_TRK_CH6: GPIOB.1 with pinCMx 13 on package pin 48 */
+#define GPIO_TRK_CH6_PIN_TRK_CH6_PIN                             (DL_GPIO_PIN_1)
+#define GPIO_TRK_CH6_PIN_TRK_CH6_IOMUX                           (IOMUX_PINCM13)
+/* Port definition for Pin Group GPIO_TRK_CH7 */
+#define GPIO_TRK_CH7_PORT                                                (GPIOB)
+
+/* Defines for PIN_TRK_CH7: GPIOB.10 with pinCMx 27 on package pin 62 */
+#define GPIO_TRK_CH7_PIN_TRK_CH7_PIN                            (DL_GPIO_PIN_10)
+#define GPIO_TRK_CH7_PIN_TRK_CH7_IOMUX                           (IOMUX_PINCM27)
 /* Port definition for Pin Group GPIO_OLED_SW_I2C */
 #define GPIO_OLED_SW_I2C_PORT                                            (GPIOA)
 

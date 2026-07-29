@@ -71,6 +71,16 @@ static const struct {
 #else
     { GPIOB,              DL_GPIO_PIN_0                   },
 #endif
+#ifdef GPIO_TRK_CH6_PORT
+    { GPIO_TRK_CH6_PORT,  GPIO_TRK_CH6_PIN_TRK_CH6_PIN  },
+#else
+    { GPIOB,              DL_GPIO_PIN_1                   },
+#endif
+#ifdef GPIO_TRK_CH7_PORT
+    { GPIO_TRK_CH7_PORT,  GPIO_TRK_CH7_PIN_TRK_CH7_PIN  },
+#else
+    { GPIOB,              DL_GPIO_PIN_10                  },
+#endif
 };
 
 /* ── 消抖状态 ── */
@@ -98,7 +108,7 @@ bool tracking_read(uint8_t ch)
     if (ch >= TRACKING_CHANNELS) return false;
 
     /* 低电平 = 检测到黑线 = true */
-    bool raw = (DL_GPIO_readPins(trk_pin[ch].port, trk_pin[ch].pin) == 0);
+    bool raw = (DL_GPIO_readPins(trk_pin[ch].port, trk_pin[ch].pin) != 0);
 
     if (raw == last_raw[ch]) {
         debounced[ch] = raw;

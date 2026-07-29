@@ -27,6 +27,8 @@ const GPIO14 = GPIO.addInstance();  /* 循迹 CH3: PB22 */
 const GPIO15 = GPIO.addInstance();  /* 循迹 CH4: PA30 */
 const GPIO16 = GPIO.addInstance();  /* 蜂鸣器: PA7 */
 const GPIO17 = GPIO.addInstance();  /* 循迹 CH5: PB0 */
+const GPIO18 = GPIO.addInstance();  /* 循迹 CH6: PB1 */
+const GPIO19 = GPIO.addInstance();  /* 循迹 CH7: PB10 */
 const I2C    = scripting.addModule("/ti/driverlib/I2C", {}, false);
 const I2C1   = I2C.addInstance();
 const PWM    = scripting.addModule("/ti/driverlib/PWM", {}, false);
@@ -201,6 +203,20 @@ GPIO17.associatedPins[0].$name            = "PIN_TRK_CH5";
 GPIO17.associatedPins[0].direction        = "INPUT";
 GPIO17.associatedPins[0].internalResistor = "PULL_UP";
 GPIO17.associatedPins[0].pin.$assign      = "PB0";
+
+GPIO18.$name                              = "GPIO_TRK_CH6";
+GPIO18.port                               = "PORTB";
+GPIO18.associatedPins[0].$name            = "PIN_TRK_CH6";
+GPIO18.associatedPins[0].direction        = "INPUT";
+GPIO18.associatedPins[0].internalResistor = "PULL_UP";
+GPIO18.associatedPins[0].pin.$assign      = "PB1";
+
+GPIO19.$name                              = "GPIO_TRK_CH7";
+GPIO19.port                               = "PORTB";
+GPIO19.associatedPins[0].$name            = "PIN_TRK_CH7";
+GPIO19.associatedPins[0].direction        = "INPUT";
+GPIO19.associatedPins[0].internalResistor = "PULL_UP";
+GPIO19.associatedPins[0].pin.$assign      = "PB10";
 
 I2C1.$name                     = "I2C_0";
 I2C1.basicEnableController     = true;

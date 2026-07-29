@@ -25,7 +25,7 @@
 #include <stdbool.h>
 
 /** @brief 循迹通道数量 */
-#define TRACKING_CHANNELS  6  /* CH0~CH4 + CH5=PB0 */
+#define TRACKING_CHANNELS  8
 
 /**
  * @brief  初始化循迹模块

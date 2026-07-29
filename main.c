@@ -1,60 +1,30 @@
 ﻿/**
  * @file    main.c
- * @brief   MPU6050 yaw + 编码器 + 4按键 (PB9计时) — SysConfig 版
+ * @brief   8路循迹 + 按键计时
  */
 
 #include "ti_msp_dl_config.h"
 #include "led/led.h"
-#include "UART/uart0.h"
 #include "tb6612/tb6612.h"
 #include "encoder/encoder.h"
 #include "oled/oled.h"
-#include "mpu6050/mpu6050.h"
-#include "common/util.h"
 #include "tracking/tracking.h"
 #include "buzzer/buzzer.h"
 #include <stdio.h>
 #include <stdint.h>
-#include <math.h>
 
 static volatile uint32_t g_tick_1ms = 0;
 
-#define PULSE_PER_CM_X10  713UL
-#define SPEED_CMS_X10(d)  ((int32_t)((int64_t)(d) * 10000 / PULSE_PER_CM_X10))
-#define DIST_CM_X10(c)    ((int64_t)(c) * 100 / PULSE_PER_CM_X10)
+/* ── 循迹参数 ── */
+#define TRK_STRAIGHT   35
+#define TRK_SMALL      30
+#define TRK_MID        25
+#define TRK_BIG         20
 
-#define GYRO_DEADBAND_DPS   0.25f
-#define YAW_DT_S            0.01f
-#define BIAS_CALIB_SAMPLES  300
-
-/* ── 循迹电机参数 (对照校赛xunji.h: STRAIGHT=320 LIGHT=260 MID=200, 缩放到0~100) ── */
-#define TRK_STRAIGHT   35   /* 直行 */
-#define TRK_LIGHT      19   /* 小转慢轮 */
-#define TRK_MID          5   /* 大转慢轮 */
-
-/* ── 按键宏 (引脚由 SysConfig 生成) ── */
-#define BTN_U8  (DL_GPIO_readPins(GPIO_BTN_U8_PORT,  GPIO_BTN_U8_PIN_BTN_U8_PIN)==0)
-#define BTN_U10 (DL_GPIO_readPins(GPIO_BTN_U10_PORT, GPIO_BTN_U10_PIN_BTN_U10_PIN)==0)
 #define BTN_U11 (DL_GPIO_readPins(GPIO_BTN_U11_PORT, GPIO_BTN_U11_PIN_BTN_U11_PIN)==0)
-#define BTN_U12 (DL_GPIO_readPins(GPIO_BTN_U12_PORT, GPIO_BTN_U12_PIN_BTN_U12_PIN)==0)
 
-static int32_t  g_l_cms_x10 = 0, g_r_cms_x10 = 0;
-static int32_t  g_l_dist = 0, g_r_dist = 0;
-static bool     g_mpu_ok = false;
-static float    g_pitch = 0.0f, g_roll = 0.0f;
-
-static float    g_yaw           = 0.0f;
-static float    g_bias          = 0.0f;
-static float    g_prev_gz       = 0.0f;
-static bool     g_first         = true;
-static uint32_t g_next_yaw      = 0;
-static int      g_still_cnt     = 0;
-
-/* 计时 */
-static uint32_t g_tmr_start = 0;
-static bool     g_tmr_on    = false;
-
-/* ═══════════════════════════════════════════════════════════════════════ */
+static uint32_t g_tmr_start=0;
+static bool     g_tmr_on=false;
 
 static void prvSetupHardware(void)
 {
@@ -62,175 +32,79 @@ static void prvSetupHardware(void)
     led_init(); led1_on(); led2_on();
     buzzer_init();
     tracking_init();
-    uart0_init();
     tb6612_init();
     encoder_init();
 }
 
 void TIMER_0_INST_IRQHandler(void)
 {
-    if (DL_TimerG_getPendingInterrupt(TIMER_0_INST) == DL_TIMER_IIDX_ZERO)
+    if(DL_TimerG_getPendingInterrupt(TIMER_0_INST)==DL_TIMER_IIDX_ZERO)
         g_tick_1ms++;
 }
 
 void GROUP1_IRQHandler(void)
 {
-    if (encoder_right_int_is_pending())
-        encoder_right_irq_handler();
+    if(encoder_right_int_is_pending()) encoder_right_irq_handler();
 }
-
-static void fmt_cms(char *b, int32_t v) {
-    int32_t a = util_abs_i32(v);
-    snprintf(b, 8, "%c%ld.%01ld", (v<0)?'-':' ', (long)(a/10), (long)(a%10));
-}
-static void fmt_dist(char *b, int32_t r) {
-    int64_t d = DIST_CM_X10(r);
-    int64_t a = (d>=0)?d:-d;
-    snprintf(b, 8, "%c%3lld.%01lld", (d<0)?'-':' ', (long long)(a/10), (long long)(a%10));
-}
-static void fmt_ang(char *b, float d) {
-    int32_t v = (int32_t)(d*10.0f);
-    char s = (v>=0)?'+':'-'; if(v<0)v=-v;
-    snprintf(b, 7, "%c%2ld.%01ld", s, (long)(v/10), (long)(v%10));
-}
-
-static float calib(void)
-{
-    float s = 0; int16_t x,y,z;
-    uart0_sendStr("Calib...\r\n");
-    for (int i=0; i<BIAS_CALIB_SAMPLES; i++) {
-        MPU6050_GetGyro(&x,&y,&z);
-        s += (float)z / GYRO_SCALE;
-        volatile uint32_t d=8000; while(d--){}
-    }
-    float b = s / BIAS_CALIB_SAMPLES;
-    char buf[40]; snprintf(buf,sizeof(buf),"bias=%.4f\r\n",(double)b);
-    uart0_sendStr(buf);
-    return b;
-}
-
-static void yaw_step(void)
-{
-    int16_t gx,gy,gz;
-    MPU6050_GetGyro(&gx,&gy,&gz);
-
-    float gz_raw = (float)gz / GYRO_SCALE;
-    float gz_dps = gz_raw - g_bias;
-    if (fabsf(gz_dps) < GYRO_DEADBAND_DPS) gz_dps = 0.0f;
-
-    if (g_first) { g_prev_gz = gz_dps; g_first = false; return; }
-
-    g_yaw += (g_prev_gz + gz_dps) * 0.5f * YAW_DT_S;
-    g_prev_gz = gz_dps;
-
-    while (g_yaw >  180.0f) g_yaw -= 360.0f;
-    while (g_yaw < -180.0f) g_yaw += 360.0f;
-
-    float g_mag = fabsf((float)gx/GYRO_SCALE) + fabsf((float)gy/GYRO_SCALE) + fabsf(gz_raw);
-
-    int16_t ax,ay,az;
-    MPU6050_GetAccel(&ax,&ay,&az);
-    float ax_g=(float)ax/ACCEL_SCALE, ay_g=(float)ay/ACCEL_SCALE, az_g=(float)az/ACCEL_SCALE;
-    float a_mag = sqrtf(ax_g*ax_g + ay_g*ay_g + az_g*az_g);
-
-    if (g_mag < 2.0f && fabsf(a_mag - 1.0f) < 0.08f) {
-        if (++g_still_cnt > 50) {
-            g_still_cnt = 50;
-            g_bias += (gz_raw - g_bias) * 0.0005f;
-        }
-    } else {
-        g_still_cnt = 0;
-    }
-
-    g_pitch = atan2f(-ax_g, sqrtf(ay_g*ay_g + az_g*az_g)) * 57.29578f;
-    g_roll  = atan2f( ay_g, sqrtf(ax_g*ax_g + az_g*az_g)) * 57.29578f;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════ */
 
 int main(void)
 {
     prvSetupHardware();
     DL_TimerG_stopCounter(TIMER_0_INST);
-    DL_TimerG_setLoadValue(TIMER_0_INST, 79999U);
-
-    uart0_sendStr("\r\n--- Yaw + BTN SysConfig ---\r\n");
-
-    { uint8_t w[1]={0x75}; DL_I2C_fillControllerTXFIFO(I2C_0_INST,w,1);
-      DL_I2C_startControllerTransfer(I2C_0_INST,0x68,DL_I2C_CONTROLLER_DIRECTION_TX,1);
-      while(!(DL_I2C_getControllerStatus(I2C_0_INST)&DL_I2C_CONTROLLER_STATUS_IDLE)){}
-      DL_I2C_startControllerTransfer(I2C_0_INST,0x68,DL_I2C_CONTROLLER_DIRECTION_RX,1);
-      while(DL_I2C_isControllerRXFIFOEmpty(I2C_0_INST)){}
-      if(DL_I2C_receiveControllerData(I2C_0_INST)==0x68){g_mpu_ok=true;MPU6050_Init();uart0_sendStr("OK\r\n");}
-      else uart0_sendStr("FAIL\r\n");
-      while(!(DL_I2C_getControllerStatus(I2C_0_INST)&DL_I2C_CONTROLLER_STATUS_IDLE)){} }
+    DL_TimerG_setLoadValue(TIMER_0_INST,79999U);
 
     NVIC_SetPriority(TIMER_0_INST_INT_IRQN,3);
     NVIC_ClearPendingIRQ(TIMER_0_INST_INT_IRQN);
     NVIC_EnableIRQ(TIMER_0_INST_INT_IRQN);
     DL_TimerG_startCounter(TIMER_0_INST);
 
-    if(g_mpu_ok){ g_bias=calib(); g_next_yaw=g_tick_1ms+10; }
-
-    uart0_sendStr("Ready\r\n"); OLED_Init();
-
-    uint32_t le=g_tick_1ms, lo=g_tick_1ms, lp=0;
-    uint32_t lt=g_tick_1ms;
-    uint32_t lb=g_tick_1ms;
+    OLED_Init();
+    uint32_t le=g_tick_1ms,lo=g_tick_1ms;
     uint32_t last_btn=0;
-    bool     pb9_was=false;
+    bool pb9_was=false;
 
     while(1){
         uint32_t n=g_tick_1ms;
 
+        /* PB9 计时启停 */
         if((int32_t)(n-last_btn)>=10){ last_btn+=10;
             bool pb9=BTN_U11;
-            if(pb9 && !pb9_was){
-                g_tmr_start = n; g_tmr_on = true;
-                g_l_dist = 0; g_r_dist = 0;
+            if(pb9&&!pb9_was){
+                g_tmr_on=!g_tmr_on;
+                if(g_tmr_on) g_tmr_start=n;
             }
-            pb9_was = pb9;
+            pb9_was=pb9;
         }
-
-        if(g_mpu_ok) while((int32_t)(n-g_next_yaw)>=0){ g_next_yaw+=10; yaw_step(); }
 
         while((int32_t)(n-le)>=10){ le+=10;
-            //encoder_data_t e; encoder_get_data(&e);
-            //g_l_cms_x10=SPEED_CMS_X10(e.left_delta); g_r_cms_x10=SPEED_CMS_X10(e.right_delta);
-            //g_l_dist+=e.left_delta; g_r_dist+=e.right_delta;
+            /* 8路循迹 侧边优先 */
+            static int16_t lx=0,rx=0;
+            uint8_t m=tracking_read_all();
+            uint8_t c0=(m>>0)&1,c1=(m>>1)&1,c2=(m>>2)&1,c3=(m>>3)&1;
+            uint8_t c4=(m>>4)&1,c5=(m>>5)&1,c6=(m>>6)&1,c7=(m>>7)&1;
+            uint8_t any=c0|c1|c2|c3|c4|c5|c6|c7;
 
-            /* ── 循迹已暂停 ── */
-            tb6612_set_speed(0, 0);
-            /* 原循迹逻辑:
-            static int16_t last_l = TRK_STRAIGHT, last_r = TRK_STRAIGHT;
-            uint8_t m = tracking_read_all();
-            uint8_t L2=(m>>0)&1, L1=(m>>1)&1, M=(m>>2)&1, R1=(m>>3)&1, R2=(m>>4)&1;
-            if      (L2==0 && L1==0 && M==0 && R1==0 && R2==0)   { tb6612_set_speed(0,0); }
-            else if (L2==1 && L1==1 && M==1 && R1==1 && R2==1)   { tb6612_set_speed(last_l, last_r); }
-            else if (M==0) { last_l = TRK_STRAIGHT; last_r = TRK_STRAIGHT; tb6612_set_speed(last_l, last_r); }
-            else if (L1==0) { last_l = TRK_STRAIGHT; last_r = TRK_LIGHT; tb6612_set_speed(last_l, last_r); }
-            else if (R1==0) { last_l = TRK_LIGHT; last_r = TRK_STRAIGHT; tb6612_set_speed(last_l, last_r); }
-            else if (L2==0) { last_l = TRK_STRAIGHT; last_r = TRK_MID; tb6612_set_speed(last_l, last_r); }
-            else if (R2==0) { last_l = TRK_MID; last_r = TRK_STRAIGHT; tb6612_set_speed(last_l, last_r); }
-            */
+            if(!any){tb6612_set_speed(lx,rx);}
+            /* 左传感器→降右轮(左转), 右传感器→降左轮(右转) [电机线左右反] */
+            else if(c0){lx=TRK_STRAIGHT;rx=TRK_BIG;tb6612_set_speed(lx,rx);}       /* PB25 大左 */
+            else if(c7){lx=TRK_BIG;rx=TRK_STRAIGHT;tb6612_set_speed(lx,rx);}       /* PB10 大右 */
+            else if(c1){lx=TRK_STRAIGHT;rx=TRK_MID;tb6612_set_speed(lx,rx);}       /* PB18 中左 */
+            else if(c6){lx=TRK_MID;rx=TRK_STRAIGHT;tb6612_set_speed(lx,rx);}       /* PB1  中右 */
+            else if(c2){lx=TRK_STRAIGHT;rx=TRK_SMALL;tb6612_set_speed(lx,rx);}     /* PB21 小左 */
+            else if(c5){lx=TRK_SMALL;rx=TRK_STRAIGHT;tb6612_set_speed(lx,rx);}     /* PB0  小右 */
+            else if(c3||c4){lx=TRK_STRAIGHT;rx=TRK_STRAIGHT;tb6612_set_speed(lx,rx);} /* PB22/PA30 直行 */
         }
 
-        if((int32_t)(n-lb)>=50) { buzzer_off(); }
-        if((int32_t)(n-lb)>=1000){ lb+=1000; buzzer_on(); }
-
-        //if((int32_t)(n-lt)>=500){ lt+=500;
-        //    led1_toggle(); led2_toggle(); }
-
         if((int32_t)(n-lo)>=100){ lo+=100;
-            uint8_t trk = tracking_read_all();
+            uint8_t tk=tracking_read_all();
+            uint32_t t=g_tmr_on?(n-g_tmr_start):0;
             OLED_Clear();
-            OLED_vsprint(0,0,16,"Trk:%d%d%d%d%d%d",
-                (trk>>0)&1,(trk>>1)&1,(trk>>2)&1,(trk>>3)&1,(trk>>4)&1,(trk>>5)&1);
+            OLED_vsprint(0,0,16,"T:%d%d%d%d%d%d%d%d",
+                (tk>>0)&1,(tk>>1)&1,(tk>>2)&1,(tk>>3)&1,
+                (tk>>4)&1,(tk>>5)&1,(tk>>6)&1,(tk>>7)&1);
+            OLED_vsprint(0,16,16,"Time:%lu.%lus %s",
+                (unsigned long)(t/1000),(unsigned long)((t%1000)/100),
+                g_tmr_on?"ON":"OFF");
             OLED_Refresh(); }
-
-        if((int32_t)(n-lp)>=5000){ lp+=5000;
-            char b[50]; snprintf(b,sizeof(b),"B=%.4f Y=%.1f S=%d\r\n",
-                (double)g_bias,(double)g_yaw,g_still_cnt);
-            uart0_sendStr(b); }
     }
 }
