@@ -1,38 +1,64 @@
 /**
  * @file    led.c
- * @brief   LED 指示灯控制模块 (PB22, 现被循迹 CH3 占用)
- * @note    若 SysConfig 中 GPIO1 未配置, 所有函数退化为空桩
+ * @brief   双路信号灯控制 (PA9=LED_SIG_1, PA29=LED_SIG_2, 高电平点亮)
+ * @note    GPIO 初始化由 SYSCFG_DL_init() 完成
  */
 #include "led.h"
 #include "ti_msp_dl_config.h"
 
-#ifdef LED_PORT
+/* ── 信号灯1: PA9 ── */
+#ifdef LED_SIG_1_PORT
 
-void led_init(void)
+void led1_on(void)
 {
-    /* GPIO 已在 SYSCFG_DL_init() 中初始化, 无需额外配置 */
+    DL_GPIO_setPins(LED_SIG_1_PORT, LED_SIG_1_PIN_9_PIN);
 }
 
-void led_toggle(void)
+void led1_off(void)
 {
-    DL_GPIO_togglePins(LED_PORT, LED_PIN_22_PIN);
+    DL_GPIO_clearPins(LED_SIG_1_PORT, LED_SIG_1_PIN_9_PIN);
 }
 
-void led_on(void)
+void led1_toggle(void)
 {
-    DL_GPIO_clearPins(LED_PORT, LED_PIN_22_PIN);
-}
-
-void led_off(void)
-{
-    DL_GPIO_setPins(LED_PORT, LED_PIN_22_PIN);
+    DL_GPIO_togglePins(LED_SIG_1_PORT, LED_SIG_1_PIN_9_PIN);
 }
 
 #else
 
-void led_init(void)   {}
-void led_toggle(void)  {}
-void led_on(void)     {}
-void led_off(void)    {}
+void led1_on(void)     {}
+void led1_off(void)    {}
+void led1_toggle(void)  {}
 
 #endif
+
+/* ── 信号灯2: PA29 ── */
+#ifdef LED_SIG_2_PORT
+
+void led2_on(void)
+{
+    DL_GPIO_setPins(LED_SIG_2_PORT, LED_SIG_2_PIN_29_PIN);
+}
+
+void led2_off(void)
+{
+    DL_GPIO_clearPins(LED_SIG_2_PORT, LED_SIG_2_PIN_29_PIN);
+}
+
+void led2_toggle(void)
+{
+    DL_GPIO_togglePins(LED_SIG_2_PORT, LED_SIG_2_PIN_29_PIN);
+}
+
+#else
+
+void led2_on(void)     {}
+void led2_off(void)    {}
+void led2_toggle(void)  {}
+
+#endif
+
+void led_init(void)
+{
+    /* GPIO 由 SYSCFG_DL_init() 配置, 无需额外操作 */
+}

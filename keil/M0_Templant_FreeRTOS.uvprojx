@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>__MSPM0G3507__</Define>
               <Undefine></Undefine>
-              <IncludePath>../;../Component;D:\Ti\mspm0_sdk_2_04_00_06\source\third_party\CMSIS\Core\Include;D:\Ti\mspm0_sdk_2_04_00_06\source;.\FreeRTOS\include;.\FreeRTOS\portable\GCC\ARM_CM0;.\FreeRTOS\portable\MemMang;..\Component\led;..\Component\oled</IncludePath>
+              <IncludePath>../;../Component;D:\Ti\mspm0_sdk_2_04_00_06\source\third_party\CMSIS\Core\Include;D:\Ti\mspm0_sdk_2_04_00_06\source;.\FreeRTOS\include;.\FreeRTOS\portable\GCC\ARM_CM0;.\FreeRTOS\portable\MemMang;..\Component\led;..\Component\oled;..\Component\tracking;..\Component\buzzer</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -587,17 +587,32 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>xunji</GroupName>
+          <GroupName>Component/buzzer</GroupName>
+          <Files>
+            <File>
+              <FileName>buzzer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Component/buzzer/buzzer.c</FilePath>
+            </File>
+            <File>
+              <FileName>buzzer.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../Component/buzzer/buzzer.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Component/tracking</GroupName>
           <Files>
             <File>
               <FileName>tracking.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Component\tracking\tracking.c</FilePath>
+              <FilePath>../Component/tracking/tracking.c</FilePath>
             </File>
             <File>
               <FileName>tracking.h</FileName>
               <FileType>5</FileType>
-              <FilePath>..\Component\tracking\tracking.h</FilePath>
+              <FilePath>../Component/tracking/tracking.h</FilePath>
             </File>
           </Files>
         </Group>

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file    tracking.h
  * @brief   5路循迹传感器模块接口
  *
@@ -25,7 +25,7 @@
 #include <stdbool.h>
 
 /** @brief 循迹通道数量 */
-#define TRACKING_CHANNELS  5
+#define TRACKING_CHANNELS  6  /* CH0~CH4 + CH5=PB0 */
 
 /**
  * @brief  初始化循迹模块

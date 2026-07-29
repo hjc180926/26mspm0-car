@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file    tracking.c
  * @brief   5路循迹传感器模块 (软件消抖 + 位置解算)
  *
@@ -65,6 +65,11 @@ static const struct {
     { GPIO_TRK_CH4_PORT,  GPIO_TRK_CH4_PIN_TRK_CH4_PIN  },
 #else
     { GPIOA,              DL_GPIO_PIN_30                  },
+#endif
+#ifdef GPIO_TRK_CH5_PORT
+    { GPIO_TRK_CH5_PORT,  GPIO_TRK_CH5_PIN_TRK_CH5_PIN  },
+#else
+    { GPIOB,              DL_GPIO_PIN_0                   },
 #endif
 };
 

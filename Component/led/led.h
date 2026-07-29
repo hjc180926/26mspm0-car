@@ -1,22 +1,24 @@
 /**
  * @file    led.h
- * @brief   LED 指示灯控制接口
+ * @brief   双路信号灯接口 (PA9/PA29, 高电平点亮)
+ *
+ * 硬件: 引脚 → LED → GND, set=亮, clear=灭
  */
 #ifndef LED_H
 #define LED_H
 
 #include <stdint.h>
 
-/** @brief 初始化 LED (GPIO 已由 SysConfig 配置) */
 void led_init(void);
 
-/** @brief 翻转 LED (1Hz 心跳闪烁) */
-void led_toggle(void);
+/* ── 信号灯1: PA9 ── */
+void led1_on(void);
+void led1_off(void);
+void led1_toggle(void);
 
-/** @brief 点亮 LED (低电平驱动) */
-void led_on(void);
-
-/** @brief 熄灭 LED (高电平) */
-void led_off(void);
+/* ── 信号灯2: PA29 ── */
+void led2_on(void);
+void led2_off(void);
+void led2_toggle(void);
 
 #endif /* LED_H */
