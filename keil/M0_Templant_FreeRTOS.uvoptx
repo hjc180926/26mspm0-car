@@ -140,7 +140,7 @@
         <SetRegEntry>
           <Number>0</Number>
           <Key>CMSIS_AGDI</Key>
-          <Name>-X"Any" -UAny -O239 -S9 -C0 -P00000000 -N00("") -D00(00000000) -L00(0) -TO65554 -TC10000000 -TT10000000 -TP20 -TDS8007 -TDT0 -TDC1F -TIEFFFFFFFF -TIP8 -FO31 -FD20200000 -FC8000 -FN1 -FF0MSPM0G1X0X_G3X0X_MAIN_128KB.FLM -FS00 -FL020000 -FP0($$Device:MSPM0G3507$02_Flash_Programming\FlashARM\MSPM0G1X0X_G3X0X_MAIN_128KB.FLM)</Name>
+          <Name>-X"Any" -UAny -O239 -S9 -C0 -P00000000 -N00("ARM CoreSight SW-DP") -D00(6BA02477) -L00(0) -TO65554 -TC10000000 -TT10000000 -TP20 -TDS8007 -TDT0 -TDC1F -TIEFFFFFFFF -TIP8 -FO31 -FD20200000 -FC8000 -FN1 -FF0MSPM0G1X0X_G3X0X_MAIN_128KB.FLM -FS00 -FL020000 -FP0($$Device:MSPM0G3507$02_Flash_Programming\FlashARM\MSPM0G1X0X_G3X0X_MAIN_128KB.FLM)</Name>
         </SetRegEntry>
         <SetRegEntry>
           <Number>0</Number>
@@ -155,7 +155,7 @@
       <DebugFlag>
         <trace>0</trace>
         <periodic>0</periodic>
-        <aLwin>0</aLwin>
+        <aLwin>1</aLwin>
         <aCover>0</aCover>
         <aSer1>0</aSer1>
         <aSer2>0</aSer2>
@@ -203,7 +203,7 @@
 
   <Group>
     <GroupName>Source</GroupName>
-    <tvExp>1</tvExp>
+    <tvExp>0</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>
@@ -415,7 +415,7 @@
 
   <Group>
     <GroupName>Component/encoder</GroupName>
-    <tvExp>0</tvExp>
+    <tvExp>1</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>
@@ -563,7 +563,7 @@
 
   <Group>
     <GroupName>Component/service</GroupName>
-    <tvExp>0</tvExp>
+    <tvExp>1</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>
@@ -591,6 +591,30 @@
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>
+    <File>
+      <GroupNumber>10</GroupNumber>
+      <FileNumber>27</FileNumber>
+      <FileType>1</FileType>
+      <tvExp>0</tvExp>
+      <tvExpOptDlg>0</tvExpOptDlg>
+      <bDave2>0</bDave2>
+      <PathWithFileName>..\Component\service\odometry.c</PathWithFileName>
+      <FilenameWithoutPath>odometry.c</FilenameWithoutPath>
+      <RteFlg>0</RteFlg>
+      <bShared>0</bShared>
+    </File>
+    <File>
+      <GroupNumber>10</GroupNumber>
+      <FileNumber>28</FileNumber>
+      <FileType>5</FileType>
+      <tvExp>0</tvExp>
+      <tvExpOptDlg>0</tvExpOptDlg>
+      <bDave2>0</bDave2>
+      <PathWithFileName>..\Component\service\odometry.h</PathWithFileName>
+      <FilenameWithoutPath>odometry.h</FilenameWithoutPath>
+      <RteFlg>0</RteFlg>
+      <bShared>0</bShared>
+    </File>
   </Group>
 
   <Group>
@@ -601,7 +625,7 @@
     <RteFlg>0</RteFlg>
     <File>
       <GroupNumber>11</GroupNumber>
-      <FileNumber>27</FileNumber>
+      <FileNumber>29</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -613,7 +637,7 @@
     </File>
     <File>
       <GroupNumber>11</GroupNumber>
-      <FileNumber>28</FileNumber>
+      <FileNumber>30</FileNumber>
       <FileType>5</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -625,7 +649,7 @@
     </File>
     <File>
       <GroupNumber>11</GroupNumber>
-      <FileNumber>29</FileNumber>
+      <FileNumber>31</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -637,7 +661,7 @@
     </File>
     <File>
       <GroupNumber>11</GroupNumber>
-      <FileNumber>30</FileNumber>
+      <FileNumber>32</FileNumber>
       <FileType>5</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -657,7 +681,7 @@
     <RteFlg>0</RteFlg>
     <File>
       <GroupNumber>12</GroupNumber>
-      <FileNumber>31</FileNumber>
+      <FileNumber>33</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -669,7 +693,7 @@
     </File>
     <File>
       <GroupNumber>12</GroupNumber>
-      <FileNumber>32</FileNumber>
+      <FileNumber>34</FileNumber>
       <FileType>5</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -689,7 +713,7 @@
     <RteFlg>0</RteFlg>
     <File>
       <GroupNumber>13</GroupNumber>
-      <FileNumber>33</FileNumber>
+      <FileNumber>35</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -701,7 +725,7 @@
     </File>
     <File>
       <GroupNumber>13</GroupNumber>
-      <FileNumber>34</FileNumber>
+      <FileNumber>36</FileNumber>
       <FileType>5</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>

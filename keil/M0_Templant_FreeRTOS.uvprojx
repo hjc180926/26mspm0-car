@@ -559,6 +559,16 @@
               <FileType>5</FileType>
               <FilePath>..\Component\service\speed_service.h</FilePath>
             </File>
+            <File>
+              <FileName>odometry.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Component\service\odometry.c</FilePath>
+            </File>
+            <File>
+              <FileName>odometry.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Component\service\odometry.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

@@ -3,8 +3,10 @@
  * @brief   双路增量式编码器接口定义
  *
  * 编码器规格:
- *   - 每圈脉冲: 440 (ENCODER_COUNTS_PER_REV)
- *   - 减速比: 30:1 → 输出轴每圈 13200 脉冲
+ *   - 电机: MG513X
+ *   - 编码器: 13 PPR (4 倍频 = 52 计数/电机圈)
+ *   - 减速比: 28:1 -> 输出轴每圈 1456 计数
+ *   - 轮径: 65mm -> 轮周长 20.42cm -> ~71 脉冲/cm
  *
  * 硬件映射 (实测):
  *   - 物理右轮: TIMG8 硬件 QEI (PA26=A, PA27=B)
@@ -25,14 +27,20 @@
 
 #include <stdint.h>
 
-/** @brief 编码器每圈脉冲数 (实测标定值) */
-#define ENCODER_COUNTS_PER_REV      (440)
+/** @brief 编码器每圈计数 (13PPR x 4 倍频 = 52, 电机轴) */
+#define ENCODER_COUNTS_PER_REV      (52)
 
-/** @brief 左轮编码器每圈脉冲数 */
+/** @brief 左轮编码器每圈计数 (电机轴) */
 #define ENCODER_LEFT_COUNTS_PER_REV  ENCODER_COUNTS_PER_REV
 
-/** @brief 右轮编码器每圈脉冲数 */
+/** @brief 右轮编码器每圈计数 (电机轴) */
 #define ENCODER_RIGHT_COUNTS_PER_REV ENCODER_COUNTS_PER_REV
+
+/** @brief 输出轴每圈计数 (52 x 28 = 1456) */
+#define ENCODER_COUNTS_PER_OUTPUT_REV  (ENCODER_COUNTS_PER_REV * 28)
+
+/** @brief 每厘米脉冲数 (1456 / (pi * 6.5) ~= 71) */
+#define ENCODER_PULSES_PER_CM     (71)
 
 /**
  * @brief 编码器数据快照结构体
@@ -41,7 +49,7 @@
  *   - left_count / right_count: 累计计数（自初始化或上次 reset 以来的总脉冲数）
  *     正值 = 正转, 负值 = 反转
  *   - left_delta / right_delta: 自上次 encoder_get_data() 调用以来的脉冲增量
- *     用于速度计算 (delta / Δt / 每圈脉冲 × 60 = RPM)
+ *     用于速度计算 (delta / Δt / 每圈脉冲 x 60 = RPM)
  */
 typedef struct {
     int32_t left_count;    /**< 左轮累计脉冲计数 */
@@ -50,51 +58,19 @@ typedef struct {
     int32_t right_delta;   /**< 右轮增量脉冲 (两次读取之差) */
 } encoder_data_t;
 
-/**
- * @brief  初始化编码器读取模块
- * @note   初始化左轮 QEI 计数器 + 右轮 GPIO 中断
- *         使能 GROUP1 中断用于 GPIO 软件正交解码
- *         应在 SYSCFG_DL_init() 之后调用
- */
 void encoder_init(void);
-
-/**
- * @brief  清零左右轮累计计数值
- * @note   通常在起跑/归零/切换控制模式时调用
- *         内部先停止计数器再清零, 保证原子性
- */
 void encoder_reset(void);
-
-/**
- * @brief  读取编码器累计计数和增量
- * @param  data  输出参数, 指向 encoder_data_t 的指针 (不可为 NULL)
- * @note   线程安全: 可在任务上下文中调用
- *         内部调用 update_left_count() 更新 QEI 累计值
- *         左右通道自动交换映射 (物理正确 → API 正确)
- */
 void encoder_get_data(encoder_data_t *data);
 
 /**
- * @brief  编码器增量换算为 RPM×10
- * @param  delta      编码器脉冲增量
+ * @brief  编码器增量换算为 RPMx10 (电机轴转速)
+ * @param  delta      编码器脉冲增量 (电机轴 52 计数/圈)
  * @param  period_ms  累计周期 (ms)
- * @return RPM×10，使用整数运算避免浮点
+ * @return RPMx10，使用整数运算避免浮点
  */
 int32_t encoder_delta_to_rpm10(int32_t delta, uint32_t period_ms);
 
-/**
- * @brief  检查右轮编码器 GPIO 中断是否待处理
- * @return 非 0 = 有中断待处理, 0 = 无
- * @note   用于 GROUP1_IRQHandler 中断分发
- */
 int encoder_right_int_is_pending(void);
-
-/**
- * @brief  右轮编码器 GPIO 软件正交解码中断处理
- * @note   必须在 GROUP1_IRQHandler 中调用
- *         使用 16 项查表实现 4 倍频正交解码
- *         更新 volatile 全局变量 g_right_count
- */
 void encoder_right_irq_handler(void);
 
 #endif /* ENCODER_H */
