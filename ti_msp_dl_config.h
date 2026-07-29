@@ -100,24 +100,6 @@ extern "C" {
 #define GPIO_PWM_TB6612_C1_IOMUX_FUNC                IOMUX_PINCM35_PF_TIMG0_CCP1
 #define GPIO_PWM_TB6612_C1_IDX                               DL_TIMER_CC_1_INDEX
 
-/* Defines for PWM_SERVO */
-#define PWM_SERVO_INST                                                     TIMA0
-#define PWM_SERVO_INST_IRQHandler                               TIMA0_IRQHandler
-#define PWM_SERVO_INST_INT_IRQN                                 (TIMA0_INT_IRQn)
-#define PWM_SERVO_INST_CLK_FREQ                                         80000000
-/* GPIO defines for channel 0 */
-#define GPIO_PWM_SERVO_C0_PORT                                             GPIOA
-#define GPIO_PWM_SERVO_C0_PIN                                     DL_GPIO_PIN_21
-#define GPIO_PWM_SERVO_C0_IOMUX                                  (IOMUX_PINCM46)
-#define GPIO_PWM_SERVO_C0_IOMUX_FUNC                 IOMUX_PINCM46_PF_TIMA0_CCP0
-#define GPIO_PWM_SERVO_C0_IDX                                DL_TIMER_CC_0_INDEX
-/* GPIO defines for channel 1 */
-#define GPIO_PWM_SERVO_C1_PORT                                             GPIOA
-#define GPIO_PWM_SERVO_C1_PIN                                     DL_GPIO_PIN_22
-#define GPIO_PWM_SERVO_C1_IOMUX                                  (IOMUX_PINCM47)
-#define GPIO_PWM_SERVO_C1_IOMUX_FUNC                 IOMUX_PINCM47_PF_TIMA0_CCP1
-#define GPIO_PWM_SERVO_C1_IDX                                DL_TIMER_CC_1_INDEX
-
 
 
 
@@ -264,24 +246,6 @@ extern "C" {
 /* Defines for PIN_7: GPIOA.7 with pinCMx 14 on package pin 49 */
 #define BUZZER_PIN_7_PIN                                         (DL_GPIO_PIN_7)
 #define BUZZER_PIN_7_IOMUX                                       (IOMUX_PINCM14)
-/* Port definition for Pin Group GPIO_TRK_CH5 */
-#define GPIO_TRK_CH5_PORT                                                (GPIOB)
-
-/* Defines for PIN_TRK_CH5: GPIOB.0 with pinCMx 12 on package pin 47 */
-#define GPIO_TRK_CH5_PIN_TRK_CH5_PIN                             (DL_GPIO_PIN_0)
-#define GPIO_TRK_CH5_PIN_TRK_CH5_IOMUX                           (IOMUX_PINCM12)
-/* Port definition for Pin Group GPIO_TRK_CH6 */
-#define GPIO_TRK_CH6_PORT                                                (GPIOB)
-
-/* Defines for PIN_TRK_CH6: GPIOB.1 with pinCMx 13 on package pin 48 */
-#define GPIO_TRK_CH6_PIN_TRK_CH6_PIN                             (DL_GPIO_PIN_1)
-#define GPIO_TRK_CH6_PIN_TRK_CH6_IOMUX                           (IOMUX_PINCM13)
-/* Port definition for Pin Group GPIO_TRK_CH7 */
-#define GPIO_TRK_CH7_PORT                                                (GPIOB)
-
-/* Defines for PIN_TRK_CH7: GPIOB.10 with pinCMx 27 on package pin 62 */
-#define GPIO_TRK_CH7_PIN_TRK_CH7_PIN                            (DL_GPIO_PIN_10)
-#define GPIO_TRK_CH7_PIN_TRK_CH7_IOMUX                           (IOMUX_PINCM27)
 /* Port definition for Pin Group GPIO_OLED_SW_I2C */
 #define GPIO_OLED_SW_I2C_PORT                                            (GPIOA)
 
@@ -329,7 +293,6 @@ void SYSCFG_DL_initPower(void);
 void SYSCFG_DL_GPIO_init(void);
 void SYSCFG_DL_SYSCTL_init(void);
 void SYSCFG_DL_PWM_TB6612_init(void);
-void SYSCFG_DL_PWM_SERVO_init(void);
 void SYSCFG_DL_QEI_ENCODER_LEFT_init(void);
 void SYSCFG_DL_TIMER_0_init(void);
 void SYSCFG_DL_I2C_0_init(void);

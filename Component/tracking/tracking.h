@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file    tracking.h
  * @brief   5路循迹传感器模块接口
  *
@@ -25,33 +25,11 @@
 #include <stdbool.h>
 
 /** @brief 循迹通道数量 */
-#define TRACKING_CHANNELS  8
+#define TRACKING_CHANNELS  5
 
-/**
- * @brief  初始化循迹模块
- * @note   清零消抖状态机, 应在 SYSCFG_DL_init() 之后调用
- */
 void tracking_init(void);
-
-/**
- * @brief  读取单通道状态 (含软件消抖)
- * @param  ch  通道编号 0~4
- * @return true=黑线(低电平), false=白底(高电平)
- * @note   消抖逻辑: 连续两次读到相同电平才更新, 建议调用周期 5~10ms
- */
 bool tracking_read(uint8_t ch);
-
-/**
- * @brief  读取全部5路状态 (含消抖)
- * @return 位掩码: bit0=CH0, bit1=CH1, ..., bit4=CH4
- *         对应位=1 表示该通道检测到黑线
- */
 uint8_t tracking_read_all(void);
+int8_t tracking_get_position(void);
 
-/**
- * @brief  获取黑线位置 (加权平均)
- * @return -4(最左) ~ +4(最右), 0=居中
- *         无黑线时返回 0 (保持上次)
- * @note   权重: CH0=-4, CH1=-2, CH2=0, CH3=+2, CH4=+4
- */
 #endif /* TRACKING_H */
