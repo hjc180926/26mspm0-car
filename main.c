@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file    main.c
  * @brief   8路循迹 + 按键计时 + 编码器里程自动停车
  */
@@ -6,12 +6,14 @@
 #include "ti_msp_dl_config.h"
 #include "led/led.h"
 #include "tb6612/tb6612.h"
+#include "UART/uart0.h"
 #include "encoder/encoder.h"
 #include "oled/oled.h"
 #include "tracking/tracking.h"
+#include "servo/servo.h"
 #include "buzzer/buzzer.h"
-#include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 volatile uint32_t g_tick_1ms = 0;
 
@@ -21,9 +23,8 @@ volatile uint32_t g_tick_1ms = 0;
 #define TRK_MID        25
 #define TRK_BIG         20
 
-/* -- 里程: avg*10/71 ~= avg*9231>>16 -- */
-#define PULSES_TO_CM_X10(avg)  ((uint32_t)((avg) * 9231U) >> 16)
-#define TARGET_CM_X10           6142
+/* -- 里程 -- */
+#define TARGET_CM_X10           6113  /* 614.16cm */
 
 #define BTN_U11 (DL_GPIO_readPins(GPIO_BTN_U11_PORT, GPIO_BTN_U11_PIN_BTN_U11_PIN)==0)
 
@@ -36,14 +37,20 @@ static int32_t  g_enc_start_l = 0;
 static int32_t  g_enc_start_r = 0;
 static uint32_t g_dist_cm_x10 = 0;
 
+static uint8_t  g_trk_display = 0;  /* OLED 显示用，避免重复读污染消抖 */
+static int16_t  g_lx = 0, g_rx = 0;   /* 当前电机速度，OLED 显示用 */
+static int16_t  g_dev = 0;            /* 当前偏差，调试用 */
+
 static void prvSetupHardware(void)
 {
     SYSCFG_DL_init();
     led_init(); led1_on(); led2_on();
     buzzer_init();
     tracking_init();
+    uart0_init();
     tb6612_init();
     encoder_init();
+    servo_init();
 }
 
 void TIMER_0_INST_IRQHandler(void)
@@ -99,7 +106,6 @@ int main(void)
         }
 
         while((int32_t)(n-le)>=10){ le+=10;
-            static int16_t lx=0,rx=0;
             if(g_run){
             /* 编码器里程累加 */
             encoder_data_t enc; encoder_get_data(&enc);
@@ -107,7 +113,7 @@ int main(void)
             int32_t b = enc.right_count - g_enc_start_r;
             if(a<0)a=-a; if(b<0)b=-b;
             uint32_t avg = ((uint32_t)a + (uint32_t)b) / 2U;
-            g_dist_cm_x10 = PULSES_TO_CM_X10(avg);
+            g_dist_cm_x10 = (uint32_t)((avg * 10U) / ENCODER_PULSES_PER_CM);
 
             if(g_dist_cm_x10 >= TARGET_CM_X10){
                 g_run=false; g_tmr_on=false; g_tmr_frozen=n-g_tmr_start;
@@ -117,37 +123,74 @@ int main(void)
             /* 循迹逻辑 */
             if(g_run){
             uint8_t m=tracking_read_all();
+            g_trk_display = m;  /* 缓存给 OLED，避免二次调用污染消抖 */
             uint8_t c0=(m>>0)&1,c1=(m>>1)&1,c2=(m>>2)&1,c3=(m>>3)&1;
             uint8_t c4=(m>>4)&1,c5=(m>>5)&1,c6=(m>>6)&1,c7=(m>>7)&1;
             uint8_t any=c0|c1|c2|c3|c4|c5|c6|c7;
 
-            if(!any){tb6612_set_speed(lx,rx);}
-            else if(c0){lx=TRK_STRAIGHT;rx=TRK_BIG;tb6612_set_speed(lx,rx);}
-            else if(c7){lx=TRK_BIG;rx=TRK_STRAIGHT;tb6612_set_speed(lx,rx);}
-            else if(c1){lx=TRK_STRAIGHT;rx=TRK_MID;tb6612_set_speed(lx,rx);}
-            else if(c6){lx=TRK_MID;rx=TRK_STRAIGHT;tb6612_set_speed(lx,rx);}
-            else if(c2){lx=TRK_STRAIGHT;rx=TRK_SMALL;tb6612_set_speed(lx,rx);}
-            else if(c5){lx=TRK_SMALL;rx=TRK_STRAIGHT;tb6612_set_speed(lx,rx);}
-            else if(c3||c4){lx=TRK_STRAIGHT;rx=TRK_STRAIGHT;tb6612_set_speed(lx,rx);}
+            if(!any){tb6612_set_speed(g_lx,g_rx);g_dev=0;}
+            else if(c0){g_lx=TRK_BIG;g_rx=TRK_STRAIGHT;tb6612_set_speed(g_lx,g_rx);g_dev=-7;}
+            else if(c7){g_lx=TRK_STRAIGHT;g_rx=TRK_BIG;tb6612_set_speed(g_lx,g_rx);g_dev= 7;}
+            else if(c7){g_lx=TRK_STRAIGHT;g_rx=TRK_BIG;tb6612_set_speed(g_lx,g_rx);g_dev= 7;}
+            else if(c7){g_lx=TRK_STRAIGHT;g_rx=TRK_BIG;tb6612_set_speed(g_lx,g_rx);g_dev= 7;}
+            else if(c1){g_lx=TRK_MID;g_rx=TRK_STRAIGHT;tb6612_set_speed(g_lx,g_rx);g_dev=-5;}
+            else if(c6){g_lx=TRK_STRAIGHT;g_rx=TRK_MID;tb6612_set_speed(g_lx,g_rx);g_dev= 5;}
+            else if(c6){g_lx=TRK_STRAIGHT;g_rx=TRK_MID;tb6612_set_speed(g_lx,g_rx);g_dev= 5;}
+            else if(c6){g_lx=TRK_STRAIGHT;g_rx=TRK_MID;tb6612_set_speed(g_lx,g_rx);g_dev= 5;}
+            else if(c2){g_lx=TRK_SMALL;g_rx=TRK_STRAIGHT;tb6612_set_speed(g_lx,g_rx);g_dev=-3;}
+            else if(c5){g_lx=TRK_STRAIGHT;g_rx=TRK_SMALL;tb6612_set_speed(g_lx,g_rx);g_dev= 3;}
+            else if(c5){g_lx=TRK_STRAIGHT;g_rx=TRK_SMALL;tb6612_set_speed(g_lx,g_rx);g_dev= 3;}
+            else if(c5){g_lx=TRK_STRAIGHT;g_rx=TRK_SMALL;tb6612_set_speed(g_lx,g_rx);g_dev= 3;}
+            else if(c3||c4){g_lx=TRK_STRAIGHT;g_rx=TRK_STRAIGHT;tb6612_set_speed(g_lx,g_rx);g_dev=0;}
             } /* if(g_run) tracking guard */
             }
         }
 
         if((int32_t)(n-lo)>=100){ lo+=100;
-            uint8_t tk=tracking_read_all();
+            uint8_t tk=g_trk_display;  /* 使用缓存值，不再二次调用 */
+            int16_t lx_d=g_lx, rx_d=g_rx;  /* 同时快照，避免与 tk 不同步 */
+            int16_t dv_d=g_dev;
             uint32_t t=g_tmr_on?(n-g_tmr_start):g_tmr_frozen;
-            uint32_t cm = g_dist_cm_x10 / 10;
-            uint32_t mm = g_dist_cm_x10 % 10;
+            uint32_t sec  = t / 1000;
+            uint32_t ts   = (t % 1000) / 100;
+            uint32_t cm   = g_dist_cm_x10 / 10;
+            uint32_t mm   = g_dist_cm_x10 % 10;
+            int      i;
+
             OLED_Clear();
-            OLED_vsprint(0,0,16,"T:%d%d%d%d%d%d%d%d",
-                (tk>>0)&1,(tk>>1)&1,(tk>>2)&1,(tk>>3)&1,
-                (tk>>4)&1,(tk>>5)&1,(tk>>6)&1,(tk>>7)&1);
-            OLED_vsprint(0,16,16,"Time:%lu.%lus %s",
-                (unsigned long)(t/1000),(unsigned long)((t%1000)/100),
-                g_tmr_on?"ON":"OFF");
-            OLED_ShowNum(0,32,cm,4,16,1);
-            OLED_ShowChar(4*8,32,'.',16,1);
-            OLED_ShowNum(5*8,32,mm,1,16,1);
+
+            /* line 0: T:00000000 */
+            OLED_ShowChar(0,0,'T',16,1);
+            OLED_ShowChar(8,0,':',16,1);
+            for(i=0;i<8;i++){
+                OLED_ShowChar((uint8_t)((2+i)*8),0,
+                    ((tk>>i)&1)?'1':'0',16,1);
+            }
+
+            /* line 1: Time:XXX.Xs */
+            OLED_ShowString(0,16,"Time:",16,1);
+            OLED_ShowNum(5*8,16,sec,3,16,1);
+            OLED_ShowChar(8*8,16,'.',16,1);
+            OLED_ShowNum(9*8,16,ts,1,16,1);
+            OLED_ShowChar(10*8,16,'s',16,1);
+            OLED_ShowString(12*8,16,g_tmr_on?" ON":"OFF",16,1);
+
+            /* line 2: Dist:XXX.Xcm */
+            OLED_ShowString(0,32,"Dist:",16,1);
+            OLED_ShowNum(5*8,32,cm,4,16,1);
+            OLED_ShowChar(9*8,32,'.',16,1);
+            OLED_ShowNum(10*8,32,mm,1,16,1);
+            OLED_ShowString(11*8,32,"cm",16,1);
+
+            /* line 3: L:XX R:XX */
+            OLED_ShowString(0,48,"D:",16,1);
+            OLED_ShowNum(2*8,48,(uint16_t)(dv_d<0?-dv_d:dv_d),2,16,1);
+            OLED_ShowChar(4*8,48,dv_d<0?'L':'R',16,1);
+            OLED_ShowString(6*8,48,"L:",16,1);
+            OLED_ShowNum(8*8,48,(uint16_t)lx_d,2,16,1);
+            OLED_ShowString(11*8,48,"R:",16,1);
+            OLED_ShowNum(13*8,48,(uint16_t)rx_d,2,16,1);
+
             OLED_Refresh(); }
     }
 }

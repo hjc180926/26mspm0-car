@@ -54,6 +54,4 @@ uint8_t tracking_read_all(void);
  *         无黑线时返回 0 (保持上次)
  * @note   权重: CH0=-4, CH1=-2, CH2=0, CH3=+2, CH4=+4
  */
-int8_t tracking_get_position(void);
-
 #endif /* TRACKING_H */

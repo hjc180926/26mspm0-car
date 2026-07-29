@@ -626,6 +626,21 @@
             </File>
           </Files>
         </Group>
+        <Group>
+          <GroupName>Component/servo</GroupName>
+          <Files>
+            <File>
+              <FileName>servo.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Component/servo/servo.c</FilePath>
+            </File>
+            <File>
+              <FileName>servo.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../Component/servo/servo.h</FilePath>
+            </File>
+          </Files>
+        </Group>
       </Groups>
     </Target>
   </Targets>

@@ -140,21 +140,3 @@ uint8_t tracking_read_all(void)
  * 权重: CH0=-4, CH1=-2, CH2=0, CH3=+2, CH4=+4
  * 无黑线时返回 0; 多路检测时按权重取平均
  */
-int8_t tracking_get_position(void)
-{
-    uint8_t  mask = tracking_read_all();
-    int16_t  sum  = 0;
-    uint8_t  cnt  = 0;
-
-    static const int8_t weight[TRACKING_CHANNELS] = {-4, -2, 0, 2, 4};
-
-    for (uint8_t i = 0; i < TRACKING_CHANNELS; i++) {
-        if (mask & (uint8_t)(1 << i)) {
-            sum += weight[i];
-            cnt++;
-        }
-    }
-
-    if (cnt == 0) return 0;
-    return (int8_t)(sum / cnt);
-}

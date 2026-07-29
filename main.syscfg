@@ -33,6 +33,7 @@ const I2C    = scripting.addModule("/ti/driverlib/I2C", {}, false);
 const I2C1   = I2C.addInstance();
 const PWM    = scripting.addModule("/ti/driverlib/PWM", {}, false);
 const PWM1   = PWM.addInstance();
+const PWM2   = PWM.addInstance();
 const QEI    = scripting.addModule("/ti/driverlib/QEI", {}, false);
 const QEI1   = QEI.addInstance();
 const SYSCTL = scripting.addModule("/ti/driverlib/SYSCTL");
@@ -243,6 +244,17 @@ PWM1.ccp1PinConfig.hideOutputInversion  = scripting.forceWrite(false);
 PWM1.ccp1PinConfig.onlyInternalResistor = scripting.forceWrite(false);
 PWM1.ccp1PinConfig.passedPeripheralType = scripting.forceWrite("Digital");
 PWM1.ccp1PinConfig.$name                = "ti_driverlib_gpio_GPIOPinGeneric5";
+
+PWM2.$name                              = "PWM_SERVO";
+PWM2.timerCount                         = 20000;
+PWM2.peripheral.$assign                 = "TIMA0";
+PWM2.peripheral.ccp0Pin.$assign         = "PA21";
+PWM2.ccp0PinConfig.direction            = scripting.forceWrite("OUTPUT");
+PWM2.ccp0PinConfig.hideOutputInversion  = scripting.forceWrite(false);
+PWM2.ccp0PinConfig.onlyInternalResistor = scripting.forceWrite(false);
+PWM2.ccp0PinConfig.passedPeripheralType = scripting.forceWrite("Digital");
+PWM2.ccp0PinConfig.$name                = "ti_driverlib_gpio_GPIOPinGeneric10";
+PWM2.ccp1PinConfig.$name                = "ti_driverlib_gpio_GPIOPinGeneric11";
 
 QEI1.$name                              = "QEI_ENCODER_LEFT";
 QEI1.peripheral.$assign                 = "TIMG8";
