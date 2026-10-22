@@ -18,42 +18,83 @@ import time
 import utime
 import image
 import gc
-from machine import PWM, FPIOA
+from machine import PWM, FPIOA, UART
 
 
 # =========================== 舵机配置 ===========================
 SERVO_GPIO = 46
+                                             # 舵机GPIO引脚号
 SERVO_PWM_CH = 2
+                                            # PWM通道号
 SERVO_FREQ_HZ = 50
+                                        # PWM频率(Hz)，标准舵机50Hz
 
 SERVO_NEUTRAL_US = 2150
-SERVO_MIN_US = 500
-SERVO_MAX_US = 2500
+                                 # 舵机中位脉宽(us)，摆杆水平时的值
+SERVO_MIN_US = 1850
+                                     # 舵机最小脉宽(us)，硬件安全兜底
+SERVO_MAX_US = 2450
+                                    # 舵机最大脉宽(us)，硬件安全兜底
 
 SERVO_DIRECTION = 1
-SERVO_SLEW_US_PER_S = 900.0
+                                      # 闭环方向：1=正向，-1=反向
+SERVO_SLEW_US_PER_S = 2200.0
+# =========================== UART2 配置 ===========================
+UART_ID = UART.UART2
+UART_TX_GPIO = 05
+UART_RX_GPIO = 06
+UART_BAUDRATE = 115200
+
+# =========================== 第3项 序列状态 ===========================
+SEQ_IDLE = 0
+SEQ_GO_NEG5 = 1
+SEQ_WAIT_NEG5 = 2
+SEQ_GO_POS5 = 3
+SEQ_DONE = 4
+
+seq_state = SEQ_IDLE
+seq_arrive_count = 0
+SEQ_ARRIVE_THRESHOLD_CM = 0.5
+SEQ_ARRIVE_FRAMES = 5
+                             # 舵机最大变化速率(us/s)，防止突变冲击
 
 # =========================== 视觉标定 ===========================
-CENTER_X_PIXEL = 540
+CENTER_X_PIXEL = 562
+                                    # 摆杆中心(0cm刻度)在AI画面中的X像素坐标
 PIXEL_PER_CM = 43.2
+                                     # 每1cm对应的像素数，需实际标定
 VALID_POS_LIMIT_CM = 13.0
+                              # 有效钢珠位置范围(cm)，超出视为无效
 
 # =========================== PID 参数 ===========================
-PID_KP = 35.0
-PID_KI = 0.0
-PID_KD = 10.0
-PID_OUTPUT_LIMIT_US = 200.0
-PID_INTEGRAL_LIMIT = 5.0
-PID_INTEGRAL_ZONE_CM = 1.5
-PID_DEADBAND_CM = 0.10
-PID_D_FILTER_TAU_S = 0.08
+PID_KP = 46.0
+                                             # 比例系数(us/cm)
+PID_KI = 0.05
+                                              # 积分系数(us/(cm·s))
+PID_KD = 26.0
+                                             # 微分系数(us·s/cm)
+PID_OUTPUT_LIMIT_US = 320.0
+                             # PID输出限幅(us)，有效范围=中位±此值
+PID_INTEGRAL_LIMIT = 6.0
+                                # 积分状态限幅(cm·s)，防止积分饱和
+PID_INTEGRAL_ZONE_CM = 2.0
+                            # 积分分离区(cm)，仅此误差范围内积分
+PID_DEADBAND_CM = 0.03
+                                 # 位置死区(cm)，误差小于此值不输出
+PID_D_FILTER_TAU_S = 0.025
+                             # D项低通滤波时间常数(s)，抑制高频噪声
 
 # =========================== 目标与保护 ===========================
 TARGET_POS_CM = 0.0
+                                    # 上电默认目标位置(cm)，0=摆杆中心
 CONTROL_ENABLE = True
+                                   # 上电是否自动启用闭环
 CONTROL_STARTUP_HOLD_MS = 1500
+                         # 启动后保持中位时间(ms)
 DETECTION_LOST_FRAMES = 3
+                             # 连续丢帧数，超过后回中
 DEBUG_PRINT_INTERVAL_MS = 300
+                        # 终端状态打印间隔(ms)
 
 # =========================== 显示配置 ===========================
 display_mode = "lcd"
@@ -113,6 +154,122 @@ def pulse_to_angle_deg(pulse_us):
         return (pulse_us - SERVO_NEUTRAL_US) / (SERVO_MAX_US - SERVO_NEUTRAL_US) * 60.0
     else:
         return (pulse_us - SERVO_NEUTRAL_US) / (SERVO_NEUTRAL_US - SERVO_MIN_US) * 60.0
+
+# =============================================================================
+#                           UART2 通信
+# =============================================================================
+
+uart_dev = None
+uart_rx_buf = ""
+
+def uart_init():
+    global uart_dev, uart_rx_buf
+    fpioa = FPIOA()
+    fpioa.set_function(UART_TX_GPIO, FPIOA.UART2_TXD)
+    fpioa.set_function(UART_RX_GPIO, FPIOA.UART2_RXD)
+    uart_dev = UART(
+        UART_ID,
+        baudrate=UART_BAUDRATE,
+        bits=UART.EIGHTBITS,
+        parity=UART.PARITY_NONE,
+        stop=UART.STOPBITS_ONE,
+        timeout=0
+    )
+    uart_rx_buf = ""
+    print("[UART] UART2 TX=GPIO%d RX=GPIO%d %d@8N1" %
+          (UART_TX_GPIO, UART_RX_GPIO, UART_BAUDRATE))
+
+
+def uart_deinit():
+    global uart_dev
+    if uart_dev is not None:
+        try:
+            uart_dev.deinit()
+        except:
+            pass
+    uart_dev = None
+
+
+def uart_send(msg):
+    if uart_dev is not None:
+        uart_dev.write(msg + "\r\n")
+
+
+def uart_poll():
+    """非阻塞接收，返回收到的完整行列表"""
+    global uart_dev, uart_rx_buf
+    lines = []
+    if uart_dev is None:
+        return lines
+    try:
+        data = uart_dev.read()
+        if data:
+            try:
+                uart_rx_buf += data.decode("utf-8")
+            except:
+                pass
+            if len(uart_rx_buf) > 256:
+                uart_rx_buf = uart_rx_buf[-256:]
+            while "\n" in uart_rx_buf:
+                line, uart_rx_buf = uart_rx_buf.split("\n", 1)
+                line = line.replace("\r", "").strip()
+                if line:
+                    lines.append(line.upper())
+    except Exception as e:
+        print("[UART] RX异常:", e)
+    return lines
+
+
+# =============================================================================
+#                           第3项 序列控制
+# =============================================================================
+
+def start_requirement3():
+    """启动第3项：球从0→-5cm→+5cm，停在+5cm"""
+    global seq_state, seq_arrive_count, TARGET_POS_CM
+    seq_state = SEQ_GO_NEG5
+    seq_arrive_count = 0
+    TARGET_POS_CM = -5.0
+    pid.reset()
+    uart_send("OK F1 TARGET=-5")
+    print("[SEQ3] 启动: 0 -> -5cm")
+
+
+def sequence_update(ball_pos_cm):
+    """每帧调用，检测是否到达目标并切换"""
+    global seq_state, seq_arrive_count, TARGET_POS_CM
+    if seq_state == SEQ_IDLE or seq_state == SEQ_DONE:
+        return
+
+    if abs(ball_pos_cm - TARGET_POS_CM) <= SEQ_ARRIVE_THRESHOLD_CM:
+        seq_arrive_count += 1
+    else:
+        seq_arrive_count = 0
+
+    if seq_arrive_count >= SEQ_ARRIVE_FRAMES:
+        seq_arrive_count = 0
+        if seq_state == SEQ_GO_NEG5:
+            seq_state = SEQ_GO_POS5
+            TARGET_POS_CM = 5.0
+            pid.reset()
+            uart_send("OK ARRIVE NEG5 NOW TARGET=+5")
+            print("[SEQ3] 到达-5cm，折返 -> +5cm")
+        elif seq_state == SEQ_GO_POS5:
+            seq_state = SEQ_DONE
+            uart_send("OK DONE POS5")
+            print("[SEQ3] 到达+5cm，完成")
+
+
+def seq_state_name():
+    if seq_state == SEQ_IDLE:
+        return "待命"
+    elif seq_state == SEQ_GO_NEG5:
+        return "去-5cm"
+    elif seq_state == SEQ_GO_POS5:
+        return "去+5cm"
+    elif seq_state == SEQ_DONE:
+        return "完成+5cm"
+    return "?"
 
 
 # =============================================================================
@@ -340,6 +497,13 @@ def draw_osd(osd_img, ball_pos_cm, ball_cx_pixel, score, position_valid,
     sc = (255, 0, 255, 0) if CONTROL_ENABLE else (255, 255, 100, 100)
     osd_img.draw_string_advanced(x0, sy, 24, status, color=sc)
 
+    # 第3项序列状态
+    if seq_state != SEQ_IDLE:
+        sy += 28
+        sname = seq_state_name()
+        osd_img.draw_string_advanced(x0, sy, 24,
+                                 "SEQ3: " + sname, color=(255, 255, 200, 0))
+
 
 # =============================================================================
 #                           AI 检测 + PID 闭环
@@ -443,6 +607,7 @@ def detection():
 
     try:
         servo_init()
+        uart_init()
         MediaManager.init()
         sensor.run()
         rgb888p_img = None
@@ -451,6 +616,15 @@ def detection():
         ai2d_output_tensor = nn.from_numpy(data)
 
         while True:
+            # UART命令轮询
+            for cmd in uart_poll():
+                if cmd in ("F1", "START", "RUN3"):
+                    start_requirement3()
+
+            # 第3项序列状态机
+            if seq_state not in (SEQ_IDLE, SEQ_DONE) and last_position_valid:
+                sequence_update(last_ball_pos_cm)
+
             with ScopedTiming("total", debug_mode > 0):
                 rgb888p_img = sensor.snapshot(chn=CAM_CHN_ID_2)
 
@@ -565,6 +739,7 @@ def detection():
         del ai2d_input_tensor
         del ai2d_output_tensor
         servo_deinit()
+        uart_deinit()
         sensor.stop()
         Display.deinit()
         MediaManager.deinit()
