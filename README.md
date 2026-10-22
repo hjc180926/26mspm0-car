@@ -33,5 +33,8 @@ git diff v07 v08      # 对比两个版本
 - `keil/`：Keil uVision 工程与源码
 - `Component/`：电机、灰度、OLED、MPU6050 等驱动
 - `main.c` / `ti_msp_dl_config.*`：主程序与 SysConfig 生成代码
+- `k230-ball-balance/`：钢球平衡的 K230 视觉 + MG996R 舵机 PID（MicroPython，独立系统）
 
 > 说明：`docs/` 下的芯片手册 PDF 未纳入仓库，避免仓库体积过大。
+>
+> `v01`–`v12` 标签记录的是 MSPM0 底盘的演进；`k230-ball-balance/` 是后加入的平衡机构代码，不参与该版本序列。
