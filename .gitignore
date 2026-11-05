@@ -24,6 +24,8 @@ __pycache__/
 
 # 文档大文件（芯片手册等不进仓库）
 docs/*.pdf
+# 例外：赛题原文需要随仓库保存
+!docs/H题-车载平衡滚球运动控制系统-赛题.pdf
 
 # Windows
 Thumbs.db
